@@ -1,0 +1,44 @@
+pipeline {
+    agent { label 'agent' }
+    stages {
+        stage('checkout') {
+            steps {
+                checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: '*/main']],
+                        userRemoteConfigs: [[url: 'https://github.com/Manhr/sample-webapp.git', credentialsId: 'github_token']]
+                ])
+            }
+        }
+        stage('Build') {
+            steps {
+                sh '''
+                    mvn clean install
+                '''
+            }
+        }
+        stage('Test') {
+            steps {
+                sh '''
+                    mvn test
+                '''
+            }
+        }
+        stage('Deploy To Artifactory') {
+            steps {
+                configFileProvider([configFile(fileId: '1bbe172d-2cc7-47d5-8f60-bd77d42a68c9', variable: 'MAVEN_SETTINGS')]) {
+                    sh '''
+                        mvn deploy -s $MAVEN_SETTINGS
+                    '''
+                }
+            }
+        }
+        stage('Deploy War To Tomcat') {
+            steps {
+                sh '''
+                    echo "Deployed War File to Tomcat"
+                '''
+            }
+        }
+    }
+}
